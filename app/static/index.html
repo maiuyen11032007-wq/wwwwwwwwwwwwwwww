@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SphereAI - Hệ Thống AI Xử Lý & Phân Tích Dữ Liệu</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="/static/style.css?v=10.0">
+</head>
+<body>
+    <div class="app-layout">
+        <!-- ==================== THANH BÊN TRÁI (MÀU XANH DƯƠNG NHẠT - DỄ NHÌN) ==================== -->
+        <aside class="left-sidebar" id="left-sidebar">
+            <div class="sidebar-header">
+                <div class="brand-logo">
+                    <div class="sphere-icon">
+                        <span class="core"></span>
+                        <span class="ring ring-1"></span>
+                    </div>
+                    <span class="brand-name">SphereAI</span>
+                </div>
+                <button class="sidebar-toggle-btn" id="btn-toggle-sidebar" title="Thu gọn / Mở rộng thanh bên">
+                    <span id="sidebar-toggle-icon">◀</span>
+                </button>
+            </div>
+
+            <!-- Trạng thái hiện tại -->
+            <div class="sidebar-dataset-badge" id="sidebar-dataset-info">
+                <div class="status-indicator">
+                    <span id="nav-data-dot" class="status-dot dot-idle"></span>
+                    <span id="nav-data-text">Chưa có dữ liệu</span>
+                </div>
+                <small id="nav-data-sub">Chọn file &amp; bối cảnh để bắt đầu</small>
+            </div>
+
+            <!-- Menu điều hướng gọn gàng -->
+            <nav class="sidebar-nav">
+                <a href="javascript:void(0)" class="nav-item active" data-view="home">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-label">Quy trình &amp; Duyệt dữ liệu</span>
+                </a>
+
+                <div class="nav-section-title">BÁO CÁO ĐẦU RA (BƯỚC 5)</div>
+
+                <!-- 1. File Excel -->
+                <div class="nav-item-group" id="nav-group-excel">
+                    <a href="javascript:void(0)" class="nav-item" data-view="excel">
+                        <span class="nav-icon">📑</span>
+                        <span class="nav-label">File Excel đã làm sạch</span>
+                    </a>
+                    <div class="nav-sub-actions">
+                        <button class="sub-btn btn-preview" data-view="excel">👁️ Xem</button>
+                        <a href="/api/export/excel" class="sub-btn btn-download-link" id="nav-dl-excel">📥 Tải .xlsx</a>
+                    </div>
+                </div>
+
+                <!-- 2. Dashboard -->
+                <div class="nav-item-group" id="nav-group-dashboard">
+                    <a href="javascript:void(0)" class="nav-item" data-view="dashboard">
+                        <span class="nav-icon">📊</span>
+                        <span class="nav-label">Dashboard đa chiều</span>
+                    </a>
+                    <div class="nav-sub-actions">
+                        <button class="sub-btn btn-preview" data-view="dashboard">👁️ Xem</button>
+                        <a href="/api/export/excel" class="sub-btn btn-download-link">📥 Tải số liệu</a>
+                    </div>
+                </div>
+
+                <!-- 3. Báo cáo Word -->
+                <div class="nav-item-group" id="nav-group-report">
+                    <a href="javascript:void(0)" class="nav-item" data-view="report">
+                        <span class="nav-icon">📄</span>
+                        <span class="nav-label">Báo cáo Word trình sếp</span>
+                    </a>
+                    <div class="nav-sub-actions">
+                        <button class="sub-btn btn-preview" data-view="report">👁️ Xem</button>
+                        <a href="/api/export/word" class="sub-btn btn-download-link" id="nav-dl-word">📥 Tải .docx</a>
+                    </div>
+                </div>
+
+                <div class="nav-section-title">HỆ THỐNG</div>
+                <a href="javascript:void(0)" class="nav-item" id="nav-reset-data">
+                    <span class="nav-icon">🔄</span>
+                    <span class="nav-label">Làm mới toàn bộ</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- ==================== NỘI DUNG CHÍNH ==================== -->
+        <main class="main-content-area" id="main-content-area">
+            <!-- Thanh tiêu đề trên cùng tối giản -->
+            <header class="topbar">
+                <div class="topbar-left">
+                    <button class="mobile-menu-btn" id="btn-mobile-menu">☰</button>
+                    <span class="view-title" id="current-view-title">Quy Trình Xử Lý &amp; Phân Tích Dữ Liệu</span>
+                </div>
+                <div class="topbar-right">
+                    <span class="step-progress-pill" id="top-stage-pill">Bước 1: Nhập dữ liệu &amp; Bối cảnh</span>
+                </div>
+            </header>
+
+            <!-- Thanh trạng thái đang xử lý -->
+            <div id="ai-loading-bar" class="ai-loading-bar" style="display: none;">
+                <div class="spinner"></div>
+                <div class="loading-msg">
+                    <strong id="loading-title">Hệ thống đang xử lý...</strong>
+                    <span id="loading-subtitle">Vui lòng đợi trong giây lát...</span>
+                </div>
+            </div>
+
+            <!-- ==================== VIEW 1: TRANG CHỦ (GỌN GÀNG, DỄ DÙNG) ==================== -->
+            <section class="content-view active-view" id="view-home">
+                <div class="home-workspace-container">
+                    
+                    <!-- KHUNG 1 (Ở GIỮA): TẢI FILE LÊN & BỐI CẢNH DOANH NGHIỆP -->
+                    <div class="central-input-hub">
+                        <div class="hub-grid">
+                            <!-- CỘT TRÁI: 1. TẢI FILE DỮ LIỆU -->
+                            <div class="hub-card upload-hub-card" id="dropzone-box">
+                                <div class="hub-card-header">
+                                    <span class="hub-step-tag">Mục 1</span>
+                                    <h3>📂 Đưa File Dữ Liệu Lên</h3>
+                                </div>
+                                
+                                <div class="upload-drop-area" id="upload-drop-area">
+                                    <div class="upload-icon-big">📊</div>
+                                    <h4 id="upload-status-title">Kéo thả file Excel (.xlsx, .xls) hoặc CSV vào đây</h4>
+                                    <p id="upload-status-sub">Hoặc chọn trực tiếp từ máy tính của bạn</p>
+                                    
+                                    <!-- Hiển thị file đã chọn -->
+                                    <div id="selected-file-badge" class="selected-file-badge" style="display: none;">
+                                        <span>✅</span>
+                                        <span id="selected-file-name">data.xlsx</span>
+                                        <button type="button" id="btn-remove-file" class="btn-remove-file" title="Bỏ chọn">✕</button>
+                                    </div>
+
+                                    <div class="upload-btn-group">
+                                        <label for="center-file-input" class="btn-choose-file">
+                                            <span>📁 Chọn file từ máy tính</span>
+                                        </label>
+                                        <input type="file" id="center-file-input" accept=".xlsx,.xls,.csv,.tsv,.txt" style="display: none;">
+                                        
+                                        <button type="button" class="btn-use-sample" id="btn-center-sample">
+                                            <span>⚡ Dùng dữ liệu mẫu CRM</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- CỘT PHẢI: 2. BỐI CẢNH DOANH NGHIỆP -->
+                            <div class="hub-card context-hub-card">
+                                <div class="hub-card-header">
+                                    <span class="hub-step-tag tag-purple">Mục 2</span>
+                                    <h3>🏢 Nhập Bối Cảnh Doanh Nghiệp</h3>
+                                </div>
+
+                                <div class="context-body">
+                                    <div class="context-presets">
+                                        <button type="button" class="preset-chip" data-context="Doanh nghiệp B2B/Bán hàng CRM: Đang gặp vấn đề tỷ lệ chốt deal thấp ở giai đoạn Đề xuất & Đàm phán, cần rà soát chất lượng dữ liệu khách hàng, tính tổng Pipeline và tìm Top 5 cơ hội lớn cần ưu tiên chốt doanh số.">💼 Bán hàng &amp; CRM</button>
+                                        <button type="button" class="preset-chip" data-context="Doanh nghiệp Sản xuất & Kho vận: Cần chuẩn hóa danh mục hàng tồn kho, phát hiện mặt hàng sắp hết hoặc tồn đọng vốn cao, đánh giá vòng quay hàng tồn và đề xuất kế hoạch nhập/xả kho.">📦 Kho vận</button>
+                                        <button type="button" class="preset-chip" data-context="Bộ phận Tài chính - Kế toán: Cần kiểm tra tính hợp lệ của các khoản thu chi, phát hiện giao dịch bất thường hoặc trùng lặp, phân tích cơ cấu chi phí - lợi nhuận và tối ưu dòng tiền.">💰 Tài chính</button>
+                                        <button type="button" class="preset-chip" data-context="Quản trị Nhân sự (HR): Cần chuẩn hóa hồ sơ nhân viên, đánh giá hiệu suất làm việc (KPI), phân tích cơ cấu lương thưởng theo phòng ban và đề xuất chính sách giữ chân nhân tài.">👥 Nhân sự</button>
+                                        <button type="button" class="preset-chip" data-context="Kinh doanh Bán lẻ & TMĐT: Cần phân tích doanh thu theo nhóm sản phẩm/kênh bán, xác định mặt hàng chủ lực (Best-seller) và tối ưu chiến dịch thúc đẩy doanh số.">🛒 Bán lẻ</button>
+                                    </div>
+
+                                    <textarea 
+                                        id="business-context-input" 
+                                        rows="3" 
+                                        placeholder="Mô tả bối cảnh doanh nghiệp & vấn đề đang gặp phải (Bắt buộc nhập để AI phân tích đúng trọng tâm)..."
+                                    ></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- THANH KIỂM TRA 2 ĐIỀU KIỆN & NÚT BẮT ĐẦU -->
+                        <div class="hub-action-footer">
+                            <div class="readiness-checklist">
+                                <div class="ready-item" id="ready-data-status">
+                                    <span>⏳ 1. Chưa có dữ liệu</span>
+                                </div>
+                                <div class="ready-item" id="ready-context-status">
+                                    <span>⏳ 2. Chưa nhập bối cảnh doanh nghiệp</span>
+                                </div>
+                            </div>
+                            <button type="button" class="btn-run-workflow btn-locked" id="btn-run-workflow">
+                                <span class="run-icon">🚀</span>
+                                <span id="btn-run-text">Đưa đủ Dữ liệu &amp; Bối cảnh để Bắt đầu phân tích</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- ==================== KHUNG 2: TRẠM KIỂM DUYỆT & ĐÁNH GIÁ CỦA CON NGƯỜI (HIỆN NGAY KHI CẦN DUYỆT) ==================== -->
+                    
+                    <!-- TRẠM DUYỆT 1 (SAU BƯỚC 2): SO SÁNH LÀM SẠCH SO VỚI FILE BAN ĐẦU & KIỂM DUYỆT -->
+                    <div id="human-gatekeeper-panel" class="human-review-panel" style="display: none;">
+                        <div class="hr-header hr-header-blue">
+                            <div class="hr-title-group">
+                                <span class="hr-badge-human">👤 BƯỚC 3: CẦN BẠN KIỂM DUYỆT</span>
+                                <h3>🛡️ Kết quả Làm sạch (So với File ban đầu) &amp; Kiểm duyệt dữ liệu</h3>
+                            </div>
+                            <span id="hr-gk-loop-tag" class="hr-loop-tag">Lần làm sạch #1</span>
+                        </div>
+
+                        <div class="hr-body">
+                            <!-- BẢNG ĐỐI CHIẾU TRƯỚC VS SAU KHI LÀM SẠCH -->
+                            <div class="cleaning-comparison-box">
+                                <div class="cmp-title">📊 Báo cáo đối chiếu: File ban đầu ➔ Sau khi Làm sạch (Bước 2)</div>
+                                <div class="cmp-cards-grid">
+                                    <div class="cmp-card">
+                                        <span class="cmp-label">Điểm chất lượng dữ liệu</span>
+                                        <div class="cmp-values">
+                                            <span class="val-before" id="cmp-health-before">0%</span>
+                                            <span class="cmp-arrow">➔</span>
+                                            <strong class="val-after text-green" id="cmp-health-after">100%</strong>
+                                        </div>
+                                        <small id="cmp-health-note">Đã xử lý triệt để lỗi dữ liệu</small>
+                                    </div>
+                                    <div class="cmp-card">
+                                        <span class="cmp-label">Số dòng dữ liệu</span>
+                                        <div class="cmp-values">
+                                            <span class="val-before" id="cmp-rows-before">0</span>
+                                            <span class="cmp-arrow">➔</span>
+                                            <strong class="val-after" id="cmp-rows-after">0</strong>
+                                        </div>
+                                        <small id="cmp-rows-note">Đã lọc bỏ dòng trùng</small>
+                                    </div>
+                                    <div class="cmp-card">
+                                        <span class="cmp-label">Dòng bị trùng lặp</span>
+                                        <div class="cmp-values">
+                                            <span class="val-before" id="cmp-dup-before">0</span>
+                                            <span class="cmp-arrow">➔</span>
+                                            <strong class="val-after text-green" id="cmp-dup-after">0</strong>
+                                        </div>
+                                        <small id="cmp-dup-note">Xóa trùng lặp 100% &amp; trùng mã</small>
+                                    </div>
+                                    <div class="cmp-card">
+                                        <span class="cmp-label">Ô bị trống (Thiếu dữ liệu)</span>
+                                        <div class="cmp-values">
+                                            <span class="val-before" id="cmp-missing-before">0</span>
+                                            <span class="cmp-arrow">➔</span>
+                                            <strong class="val-after text-green" id="cmp-missing-after">0</strong>
+                                        </div>
+                                        <small id="cmp-missing-note">Đã tự động điền chuẩn hóa</small>
+                                    </div>
+                                </div>
+
+                                <!-- Tóm tắt các thao tác làm sạch đã thực hiện -->
+                                <div id="hr-gk-actions-list" class="hr-actions-note"></div>
+                            </div>
+
+                            <!-- 2 TAB XEM BẢNG: CHI TIẾT CÁC Ô ĐÃ SỬA vs BẢNG DỮ LIỆU SAU LÀM SẠCH -->
+                            <div class="hr-tabs-bar">
+                                <button type="button" class="hr-tab-btn active" id="tab-btn-changes">
+                                    🔍 Chi tiết các dòng/ô đã làm sạch so với File gốc (<span id="changes-count-badge">0</span>)
+                                </button>
+                                <button type="button" class="hr-tab-btn" id="tab-btn-preview">
+                                    📋 Xem bảng dữ liệu hoàn chỉnh sau làm sạch
+                                </button>
+                            </div>
+
+                            <!-- Nội dung Tab 1: Bảng chi tiết Trước -> Sau từng dòng -->
+                            <div id="tab-content-changes" class="hr-mini-table-wrap">
+                                <table class="hr-mini-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Vị trí Dòng</th>
+                                            <th>Cột dữ liệu</th>
+                                            <th>Giá trị ở File Ban Đầu (Trước)</th>
+                                            <th>Giá trị Sau Làm Sạch (Sau)</th>
+                                            <th>Hình thức xử lý</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="hr-changes-tbody"></tbody>
+                                </table>
+                            </div>
+
+                            <!-- Nội dung Tab 2: Bảng dữ liệu sau làm sạch -->
+                            <div id="tab-content-preview" class="hr-mini-table-wrap" style="display: none;">
+                                <table class="hr-mini-table">
+                                    <thead id="hr-gk-thead"></thead>
+                                    <tbody id="hr-gk-tbody"></tbody>
+                                </table>
+                            </div>
+
+                            <!-- Hộp tùy chọn khi người dùng bấm "KHÔNG - Quay lại bước làm sạch dữ liệu" -->
+                            <div id="hr-reclean-options" class="hr-feedback-drawer" style="display: none;">
+                                <h4>🔄 Tùy chỉnh cách làm sạch lại trên File gốc (Quay lại Bước 2):</h4>
+                                <div class="reclean-checkboxes">
+                                    <label><input type="checkbox" id="chk-drop-dup" checked> Xóa hoàn toàn các dòng trùng lặp</label>
+                                    <label><input type="checkbox" id="chk-fill-missing" checked> Điền giá trị mặc định/trung vị vào các ô trống</label>
+                                    <label><input type="checkbox" id="chk-drop-missing"> Xóa bỏ hẳn các dòng có ô bị trống (thay vì điền mặc định)</label>
+                                    <label><input type="checkbox" id="chk-fix-anomaly" checked> Chuẩn hóa các giá trị âm bất thường</label>
+                                </div>
+                                <input type="text" id="input-reclean-custom" class="hr-text-input" placeholder="Nhập yêu cầu làm sạch bổ sung (nếu có)...">
+                                <div class="drawer-btn-row">
+                                    <button type="button" class="btn-execute-loop" id="btn-confirm-reclean">
+                                        ↩ Thực Hiện Làm Sạch Lại
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- 2 NÚT QUYẾT ĐỊNH CỦA CON NGƯỜI -->
+                            <div class="hr-decision-actions">
+                                <button type="button" class="btn-human-yes" id="btn-human-gk-yes">
+                                    ✅ CÓ — Dữ liệu Hợp lệ (Chuyển sang Bước 4: Phân tích dữ liệu)
+                                </button>
+                                <button type="button" class="btn-human-no" id="btn-human-gk-no">
+                                    ❌ KHÔNG — Quay lại bước làm sạch dữ liệu
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TRẠM DUYỆT 2 (SAU BƯỚC 4): ĐÁNH GIÁ KẾT QUẢ PHÂN TÍCH -->
+                    <div id="human-evaluation-panel" class="human-review-panel" style="display: none;">
+                        <div class="hr-header hr-header-gold">
+                            <div class="hr-title-group">
+                                <span class="hr-badge-human badge-gold">👤 BƯỚC 4 ➔ 5: CẦN BẠN ĐÁNH GIÁ KẾT QUẢ</span>
+                                <h3>⭐ Đánh giá kết quả phân tích (Đạt yêu cầu?)</h3>
+                            </div>
+                            <span id="hr-eval-loop-tag" class="hr-loop-tag">Đánh giá lần #1</span>
+                        </div>
+
+                        <div class="hr-body">
+                            <div class="hr-insight-preview">
+                                <div class="hr-domain-banner" id="hr-eval-domain"></div>
+                                <div class="hr-kpi-preview-grid" id="hr-eval-kpis"></div>
+                                <div class="hr-top-priorities-preview" id="hr-eval-priorities"></div>
+                            </div>
+
+                            <!-- Hộp nhập yêu cầu khi người dùng chọn "KHÔNG - Điều chỉnh & phân tích lại" -->
+                            <div id="hr-refine-options" class="hr-feedback-drawer" style="display: none;">
+                                <h4>🔄 Nhập yêu cầu Điều chỉnh &amp; Phân tích lại (Quay lại Bước 4):</h4>
+                                <textarea id="input-refine-feedback" rows="2" class="hr-textarea" placeholder="Nhập nội dung bạn muốn AI điều chỉnh hoặc phân tích sâu hơn (VD: Phân tích kỹ hơn rủi ro dòng tiền, bổ sung hướng phát triển Quý tới...)"></textarea>
+                                <div class="drawer-btn-row">
+                                    <button type="button" class="btn-execute-loop" id="btn-confirm-refine">
+                                        ↩ Gửi Yêu Cầu Điều Chỉnh &amp; Phân Tích Lại
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="hr-decision-actions">
+                                <button type="button" class="btn-human-yes" id="btn-human-eval-yes">
+                                    ✅ CÓ — Đạt yêu cầu (Mở khóa Bước 5: Xuất Excel, Dashboard, Báo cáo Word)
+                                </button>
+                                <button type="button" class="btn-human-no" id="btn-human-eval-no">
+                                    ❌ KHÔNG — Điều chỉnh &amp; phân tích lại
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- BANNER HOÀN TẤT BƯỚC 5 -->
+                    <div id="home-data-banner" class="home-data-banner" style="display: none;">
+                        <div class="banner-icon">🎉</div>
+                        <div class="banner-text">
+                            <strong id="banner-title">Đã hoàn tất toàn bộ quy trình 5 bước!</strong>
+                            <span id="banner-desc">Bấm vào 3 nút bên phải để Xem hoặc Tải về kết quả:</span>
+                        </div>
+                        <div class="banner-actions">
+                            <button class="btn-banner-action" data-view="excel">📑 Xem &amp; Tải File Excel</button>
+                            <button class="btn-banner-action" data-view="dashboard">📊 Xem Dashboard 4 Chiều</button>
+                            <button class="btn-banner-action" data-view="report">📄 Xem &amp; Tải Báo Cáo Word Trình Sếp</button>
+                        </div>
+                    </div>
+
+                    <!-- ==================== KHUNG 3: SƠ ĐỒ QUY TRÌNH XỬ LÝ DỮ LIỆU ==================== -->
+                    <div class="workflow-section-wrapper" id="workflow-section">
+                        <div class="wf-header-banner">
+                            <div class="wf-deco-line"></div>
+                            <div class="wf-title-pill">
+                                <svg class="wf-bar-svg" width="26" height="22" viewBox="0 0 28 24" fill="none">
+                                    <rect x="2" y="13" width="5" height="9" rx="1.5" fill="#3b82f6"/>
+                                    <rect x="10" y="7" width="5" height="15" rx="1.5" fill="#2563eb"/>
+                                    <rect x="18" y="2" width="5" height="20" rx="1.5" fill="#1d4ed8"/>
+                                </svg>
+                                <h2 class="wf-pill-text">Quy trình xử lý dữ liệu</h2>
+                            </div>
+                            <div class="wf-deco-line"></div>
+                        </div>
+
+                        <div class="flowchart-scroll-wrapper">
+                            <div class="flowchart-canvas" id="flowchart-canvas">
+                                
+                                <!-- BƯỚC 1: NHẬP DỮ LIỆU -->
+                                <div class="fc-box fc-step-1" id="wf-step-1">
+                                    <div class="fc-num-badge badge-1">1</div>
+                                    <div class="fc-box-title">Nhập dữ liệu</div>
+                                    <div class="fc-box-sub">(Từ nhiều nguồn)</div>
+                                    
+                                    <div class="fc-illustration-1">
+                                        <div class="fc-source-circles">
+                                            <div class="fc-src-circle"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+                                            <div class="fc-src-circle"><svg width="20" height="20" viewBox="0 0 24 24" fill="#3b82f6"><path d="M18.42 9.22A7 7 0 0 0 5.06 10.9 4.5 4.5 0 0 0 5.5 19.5h12.5a4.5 4.5 0 0 0 .42-8.98z"/></svg></div>
+                                            <div class="fc-src-circle"><div class="mini-excel-icon"><span>X</span></div></div>
+                                        </div>
+                                        <svg class="fc-dashed-arrows" width="110" height="24" viewBox="0 0 120 26">
+                                            <line x1="22" y1="2" x2="46" y2="22" stroke="#334155" stroke-width="1.6" stroke-dasharray="3,2"/>
+                                            <line x1="60" y1="2" x2="60" y2="22" stroke="#334155" stroke-width="1.6" stroke-dasharray="3,2"/>
+                                            <line x1="98" y1="2" x2="74" y2="22" stroke="#334155" stroke-width="1.6" stroke-dasharray="3,2"/>
+                                        </svg>
+                                        <div class="fc-cylinder-db">
+                                            <svg width="52" height="46" viewBox="0 0 56 52">
+                                                <path d="M4 10v30c0 4.4 10.7 8 24 8s24-3.6 24-8V10" fill="#2563eb" stroke="#1e293b" stroke-width="1.5"/>
+                                                <ellipse cx="28" cy="10" rx="24" ry="8" fill="#60a5fa" stroke="#1e293b" stroke-width="1.5"/>
+                                            </svg>
+                                        </div>
+                                    </div>
+                                    <div class="fc-status-tag" id="status-step-1">Chờ nhập liệu</div>
+                                </div>
+
+                                <div class="fc-arrow-short">
+                                    <svg width="32" height="24" viewBox="0 0 34 24">
+                                        <line x1="2" y1="12" x2="28" y2="12" stroke="#1e293b" stroke-width="2.2"/>
+                                        <polyline points="21,6 29,12 21,18" fill="none" stroke="#1e293b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </div>
+
+                                <!-- CỤM VÒNG LẶP 1: BƯỚC 2 + KIỂM DUYỆT -->
+                                <div class="fc-loop-group" id="fc-loop-group-1">
+                                    <div class="fc-loop-top-row">
+                                        <div class="fc-box fc-step-2" id="wf-step-2">
+                                            <div class="fc-num-badge badge-2">2</div>
+                                            <div class="fc-box-title">Làm sạch dữ liệu</div>
+                                            <div class="fc-box-sub">(Chuẩn hóa, xử lý)</div>
+                                            <div class="fc-illustration-2">
+                                                <svg width="105" height="95" viewBox="0 0 120 110">
+                                                    <line x1="78" y1="14" x2="48" y2="56" stroke="#2563eb" stroke-width="6" stroke-linecap="round"/>
+                                                    <path d="M36 48 L60 64 L44 86 L16 66 Z" fill="#f59e0b" stroke="#1e293b" stroke-width="1.8" stroke-linejoin="round"/>
+                                                    <g transform="translate(82, 72)">
+                                                        <circle cx="0" cy="0" r="15" fill="#3b82f6" stroke="#1e293b" stroke-width="1.8"/>
+                                                        <circle cx="0" cy="0" r="6" fill="#e6f9ed" stroke="#1e293b" stroke-width="1.8"/>
+                                                    </g>
+                                                </svg>
+                                            </div>
+                                            <div class="fc-status-tag" id="status-step-2">Chờ làm sạch</div>
+                                        </div>
+
+                                        <div class="fc-arrow-short">
+                                            <svg width="32" height="24" viewBox="0 0 34 24">
+                                                <line x1="2" y1="12" x2="28" y2="12" stroke="#1e293b" stroke-width="2.2"/>
+                                                <polyline points="21,6 29,12 21,18" fill="none" stroke="#1e293b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                                            </svg>
+                                        </div>
+
+                                        <div class="fc-diamond-wrapper" id="wf-decision-1">
+                                            <div class="fc-diamond">
+                                                <div class="fc-diamond-inner">
+                                                    <div class="fc-shield-icon">
+                                                        <svg width="26" height="26" viewBox="0 0 24 24">
+                                                            <path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3z" fill="#16a34a" stroke="#1e293b" stroke-width="1.5"/>
+                                                            <polyline points="9 12 11 14 15 10" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                                        </svg>
+                                                    </div>
+                                                    <div class="fc-diamond-title">Kiểm duyệt<br>dữ liệu</div>
+                                                    <div class="fc-diamond-sub">(Có hợp lệ?)</div>
+                                                </div>
+                                            </div>
+                                            <button type="button" class="fc-pill-no clickable-pill" id="pill-no-1">Không</button>
+                                        </div>
+                                    </div>
+
+                                    <div class="fc-loop-bottom" id="fc-loop-track-1">
+                                        <svg class="fc-loop-svg" width="330" height="64" viewBox="0 0 330 68">
+                                            <path d="M 262 2 L 262 30 Q 262 46 246 46 L 91 46 Q 75 46 75 30 L 75 8" fill="none" stroke="#d94343" stroke-width="2.5" stroke-linecap="round"/>
+                                            <polyline points="69,15 75,5 81,15" fill="none" stroke="#d94343" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                        <div class="fc-loop-box clickable-loop-box" id="loop-label-1">
+                                            Quay lại bước<br>làm sạch dữ liệu
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="fc-arrow-yes" id="arrow-yes-1">
+                                    <button type="button" class="fc-pill-yes clickable-pill" id="pill-yes-1">Có</button>
+                                    <svg width="52" height="24" viewBox="0 0 56 24">
+                                        <line x1="2" y1="12" x2="48" y2="12" stroke="#1e293b" stroke-width="2.4"/>
+                                        <polyline points="41,6 49,12 41,18" fill="none" stroke="#1e293b" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </div>
+
+                                <!-- CỤM VÒNG LẶP 2: BƯỚC 4 + ĐÁNH GIÁ KẾT QUẢ -->
+                                <div class="fc-loop-group" id="fc-loop-group-2">
+                                    <div class="fc-loop-top-row">
+                                        <div class="fc-box fc-step-4" id="wf-step-4">
+                                            <div class="fc-num-badge badge-4">4</div>
+                                            <div class="fc-box-title">Phân tích dữ liệu</div>
+                                            <div class="fc-box-sub">(Tạo insight)</div>
+                                            <div class="fc-illustration-4">
+                                                <svg width="115" height="92" viewBox="0 0 130 105">
+                                                    <rect x="18" y="14" width="84" height="56" rx="5" fill="#60a5fa" stroke="#1e293b" stroke-width="1.8"/>
+                                                    <rect x="23" y="19" width="74" height="46" rx="2" fill="#eff6ff" stroke="#1e293b" stroke-width="1.2"/>
+                                                    <rect x="30" y="48" width="8" height="14" fill="#3b82f6"/>
+                                                    <rect x="44" y="40" width="8" height="22" fill="#2563eb"/>
+                                                    <rect x="58" y="32" width="8" height="30" fill="#1d4ed8"/>
+                                                    <path d="M10 70 L110 70 L116 77 L4 77 Z" fill="#93c5fd" stroke="#1e293b" stroke-width="1.8"/>
+                                                    <circle cx="92" cy="52" r="14" fill="#e0f2fe" stroke="#1e293b" stroke-width="2"/>
+                                                    <line x1="102" y1="62" x2="115" y2="75" stroke="#2563eb" stroke-width="4.5" stroke-linecap="round"/>
+                                                </svg>
+                                            </div>
+                                            <div class="fc-status-tag" id="status-step-4">Chờ phân tích</div>
+                                        </div>
+
+                                        <div class="fc-arrow-short">
+                                            <svg width="32" height="24" viewBox="0 0 34 24">
+                                                <line x1="2" y1="12" x2="28" y2="12" stroke="#1e293b" stroke-width="2.2"/>
+                                                <polyline points="21,6 29,12 21,18" fill="none" stroke="#1e293b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                                            </svg>
+                                        </div>
+
+                                        <div class="fc-diamond-wrapper" id="wf-decision-2">
+                                            <div class="fc-diamond">
+                                                <div class="fc-diamond-inner">
+                                                    <div class="fc-star-icon">
+                                                        <svg width="26" height="26" viewBox="0 0 24 24">
+                                                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" fill="#fbbf24" stroke="#1e293b" stroke-width="1.5"/>
+                                                        </svg>
+                                                    </div>
+                                                    <div class="fc-diamond-title">Đánh giá<br>kết quả</div>
+                                                    <div class="fc-diamond-sub">(Đạt yêu cầu?)</div>
+                                                </div>
+                                            </div>
+                                            <button type="button" class="fc-pill-no clickable-pill" id="pill-no-2">Không</button>
+                                        </div>
+                                    </div>
+
+                                    <div class="fc-loop-bottom" id="fc-loop-track-2">
+                                        <svg class="fc-loop-svg" width="330" height="64" viewBox="0 0 330 68">
+                                            <path d="M 262 2 L 262 30 Q 262 46 246 46 L 91 46 Q 75 46 75 30 L 75 8" fill="none" stroke="#d94343" stroke-width="2.5" stroke-linecap="round"/>
+                                            <polyline points="69,15 75,5 81,15" fill="none" stroke="#d94343" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                        <div class="fc-loop-box clickable-loop-box" id="loop-label-2">
+                                            Điều chỉnh &amp;<br>phân tích lại
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="fc-arrow-yes" id="arrow-yes-2">
+                                    <button type="button" class="fc-pill-yes clickable-pill" id="pill-yes-2">Có</button>
+                                    <svg width="52" height="24" viewBox="0 0 56 24">
+                                        <line x1="2" y1="12" x2="48" y2="12" stroke="#1e293b" stroke-width="2.4"/>
+                                        <polyline points="41,6 49,12 41,18" fill="none" stroke="#1e293b" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </div>
+
+                                <!-- BƯỚC 5: XUẤT BÁO CÁO -->
+                                <div class="fc-box fc-step-5" id="wf-step-5">
+                                    <div class="fc-num-badge badge-5">5</div>
+                                    <div class="fc-box-title">Xuất báo cáo</div>
+                                    <div class="fc-box-sub">(Đa dạng định dạng)</div>
+                                    
+                                    <div class="fc-outputs-stack">
+                                        <div class="fc-output-item wf-output-card" data-view="excel">
+                                            <div class="fc-out-icon excel-graphic"><div class="x-badge">X</div></div>
+                                            <div class="fc-out-label">File Excel</div>
+                                        </div>
+                                        <div class="fc-output-item wf-output-card" data-view="dashboard">
+                                            <div class="fc-out-icon dash-graphic">
+                                                <svg width="56" height="30" viewBox="0 0 64 36">
+                                                    <rect x="1" y="1" width="62" height="34" rx="4" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.2"/>
+                                                    <rect x="6" y="18" width="5" height="12" fill="#3b82f6"/>
+                                                    <rect x="14" y="12" width="5" height="18" fill="#2563eb"/>
+                                                    <rect x="22" y="8" width="5" height="22" fill="#1d4ed8"/>
+                                                    <circle cx="45" cy="18" r="9" fill="#16a34a"/>
+                                                </svg>
+                                            </div>
+                                            <div class="fc-out-label">Dashboard</div>
+                                        </div>
+                                        <div class="fc-output-item wf-output-card" data-view="report">
+                                            <div class="fc-out-icon word-graphic"><div class="w-badge">W</div></div>
+                                            <div class="fc-out-label">Báo cáo Word</div>
+                                        </div>
+                                    </div>
+                                    <div class="fc-status-tag" id="status-step-5">Chờ duyệt KQ</div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- ==================== VIEW 2: DASHBOARD ĐA CHIỀU ==================== -->
+            <section class="content-view" id="view-dashboard">
+                <div class="view-header-bar">
+                    <div>
+                        <h2>📊 Dashboard Phân Tích Đa Chiều Theo Bối Cảnh Doanh Nghiệp</h2>
+                        <p id="dash-domain-desc">Hệ thống 6 chỉ số KPI và 4 chiều biểu đồ gắn liền với bài toán của doanh nghiệp</p>
+                    </div>
+                    <div class="view-header-actions">
+                        <button class="btn-action-secondary" data-view="home">⬅ Quay lại Quy trình</button>
+                        <a href="/api/export/excel" class="btn-action-primary">📥 Tải Excel (.xlsx)</a>
+                        <a href="/api/export/word" class="btn-action-secondary">📄 Tải Word (.docx)</a>
+                    </div>
+                </div>
+
+                <div id="dash-empty" class="empty-view-placeholder">
+                    <div class="placeholder-icon">📊</div>
+                    <h3>Chưa có dữ liệu Dashboard</h3>
+                    <p>Hãy đưa file dữ liệu và bối cảnh lên ở Trang chủ, sau đó bấm duyệt tại Bước 3 để AI tạo Dashboard.</p>
+                    <button class="btn-action-primary" data-view="home">⬅ Về Trang chủ</button>
+                </div>
+
+                <div id="dash-content" style="display: none;">
+                    <div class="context-applied-strip" id="dash-context-strip">
+                        <strong>🏢 Bối cảnh doanh nghiệp &amp; Phương pháp phân tích:</strong> <span id="dash-context-text"></span>
+                    </div>
+
+                    <div class="kpi-cards-grid" id="kpi-cards-container"></div>
+
+                    <div class="charts-grid-container">
+                        <div class="chart-glass-card">
+                            <span class="chart-dim-badge" id="chart-1-badge">Chiều 1</span>
+                            <h4 id="chart-1-title">Biểu Đồ 1</h4>
+                            <div class="chart-canvas-wrapper"><canvas id="chartCanvas1"></canvas></div>
+                            <div class="chart-insight-box" id="chart-1-insight"></div>
+                        </div>
+
+                        <div class="chart-glass-card">
+                            <span class="chart-dim-badge badge-purple" id="chart-2-badge">Chiều 2</span>
+                            <h4 id="chart-2-title">Biểu Đồ 2</h4>
+                            <div class="chart-canvas-wrapper"><canvas id="chartCanvas2"></canvas></div>
+                            <div class="chart-insight-box" id="chart-2-insight"></div>
+                        </div>
+
+                        <div class="chart-glass-card">
+                            <span class="chart-dim-badge badge-green" id="chart-3-badge">Chiều 3</span>
+                            <h4 id="chart-3-title">Biểu Đồ 3</h4>
+                            <div class="chart-canvas-wrapper"><canvas id="chartCanvas3"></canvas></div>
+                            <div class="chart-insight-box" id="chart-3-insight"></div>
+                        </div>
+
+                        <div class="chart-glass-card">
+                            <span class="chart-dim-badge badge-amber" id="chart-4-badge">Chiều 4</span>
+                            <h4 id="chart-4-title">Biểu Đồ 4</h4>
+                            <div class="chart-canvas-wrapper"><canvas id="chartCanvas4"></canvas></div>
+                            <div class="chart-insight-box" id="chart-4-insight"></div>
+                        </div>
+                    </div>
+
+                    <div class="priorities-glass-card">
+                        <div class="card-header-flex">
+                            <div>
+                                <h3>🎯 Top 5 Trọng Tâm &amp; Ưu Tiên Hành Động</h3>
+                                <p>Được trích xuất từ 4 chiều phân tích Dashboard và bối cảnh doanh nghiệp</p>
+                            </div>
+                        </div>
+                        <div class="priorities-list" id="dash-priorities-list"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== VIEW 3: BÁO CÁO WORD TRÌNH CẤP TRÊN ==================== -->
+            <section class="content-view" id="view-report">
+                <div class="view-header-bar">
+                    <div>
+                        <h2>📄 Báo Cáo Phân Tích Dashboard &amp; Định Hướng Trình Cấp Trên (Word)</h2>
+                        <p id="report-domain-desc">Tờ trình phân tích chi tiết các con số trên Dashboard và kiến nghị lộ trình phát triển trình Ban Giám đốc</p>
+                    </div>
+                    <div class="view-header-actions">
+                        <button class="btn-action-secondary" data-view="home">⬅ Quay lại Quy trình</button>
+                        <a href="/api/export/word" class="btn-action-primary">📥 Tải Báo Cáo Word (.docx)</a>
+                    </div>
+                </div>
+
+                <div id="report-empty" class="empty-view-placeholder">
+                    <div class="placeholder-icon">📄</div>
+                    <h3>Chưa có dữ liệu Báo cáo Word</h3>
+                    <p>Hãy đưa file dữ liệu và bối cảnh lên ở Trang chủ, sau đó bấm duyệt tại Bước 3 để AI tạo Báo cáo trình cấp trên.</p>
+                    <button class="btn-action-primary" data-view="home">⬅ Về Trang chủ</button>
+                </div>
+
+                <div id="report-content" class="report-paper-container" style="display: none;">
+                    <div class="report-paper" id="report-paper-body"></div>
+                </div>
+            </section>
+
+            <!-- ==================== VIEW 4: FILE EXCEL ĐÃ LÀM SẠCH ==================== -->
+            <section class="content-view" id="view-excel">
+                <div class="view-header-bar">
+                    <div>
+                        <h2>📑 Xem Trước File Excel Đã Làm Sạch</h2>
+                        <p>Dữ liệu đã qua Bước 2 (Làm sạch) kèm báo cáo đối chiếu so với file ban đầu</p>
+                    </div>
+                    <div class="view-header-actions">
+                        <button class="btn-action-secondary" data-view="home">⬅ Quay lại Quy trình</button>
+                        <a href="/api/export/excel" class="btn-action-primary">📥 Tải File Excel (.xlsx)</a>
+                    </div>
+                </div>
+
+                <div id="excel-empty" class="empty-view-placeholder">
+                    <div class="placeholder-icon">📑</div>
+                    <h3>Chưa có dữ liệu Excel</h3>
+                    <p>Hãy đưa file Excel hoặc CSV lên ở Trang chủ để hệ thống làm sạch.</p>
+                    <button class="btn-action-primary" data-view="home">⬅ Về Trang chủ</button>
+                </div>
+
+                <div id="excel-content" style="display: none;">
+                    <div class="gatekeeper-stat-strip">
+                        <div class="stat-badge"><span class="badge-lbl">Chất lượng ban đầu ➔ Sau làm sạch:</span> <strong id="gk-stat-health">0% ➔ 100%</strong></div>
+                        <div class="stat-badge"><span class="badge-lbl">Trạng thái:</span> <strong id="gk-stat-decision" style="color: #16a34a;">Đã làm sạch</strong></div>
+                        <div class="stat-badge"><span class="badge-lbl">Số dòng sau làm sạch:</span> <strong id="gk-stat-valid">0</strong></div>
+                        <div class="stat-badge"><span class="badge-lbl">Đã điền ô trống:</span> <strong id="gk-stat-missing">0</strong></div>
+                        <div class="stat-badge"><span class="badge-lbl">Đã xóa dòng trùng:</span> <strong id="gk-stat-dup">0</strong></div>
+                    </div>
+
+                    <div class="excel-table-glass-card">
+                        <div class="table-toolbar">
+                            <input type="text" id="table-search-input" placeholder="🔍 Tìm kiếm nhanh trong bảng dữ liệu...">
+                            <span id="table-rows-count" class="table-count-label">0 dòng</span>
+                        </div>
+                        <div class="table-scroll-wrap">
+                            <table class="data-preview-table" id="data-preview-table">
+                                <thead id="preview-thead"></thead>
+                                <tbody id="preview-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="/static/app.js?v=10.0"></script>
+</body>
+</html>
